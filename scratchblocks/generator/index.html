@@ -69,6 +69,7 @@ http://opensource.org/licenses/MIT
 
 <script src="../js/scratchblocks.min.js"></script>
 <script src="../js/translations-all.js"></script>
+<script src="https://cdn.staticfile.org/crypto-js/4.0.0/crypto-js.min.js"></script>
 
 <script>
     
@@ -108,18 +109,18 @@ function fetchProject(id) {
   statusLabel.textContent = "Fetching...";
 
   fetch(url, {
-  }).then(function(response) {
-    return response.text()
-  }).then(function(text) {
+  })
+  .then(result => result.arrayBuffer())
+  .then(body => {
+    text = new Uint8Array(body)
     var isLegacy = /^ScratchV01/.test(text)
     if (isLegacy) {
         statusLabel.textContent = "scratch1.4不受支持"
       throw "Scratch1.4不受支持"
     }
-
-    var json = JSON.parse(text)
+    var json = JSON.parse(Decrypt(text))
     window.project = json; // DEBUG
-    
+    console.log(json)
     statusLabel.textContent = "加载中...";
     load_project(json);
     statusLabel.textContent = "完成！   ";
@@ -318,6 +319,32 @@ function export_code () {
     out += "\n\n";
   })
   return out.trim();
+}
+
+function uint8ArrayToString(fileData) {
+  var dataString = '';
+  for (var i = 0; i < fileData.length; i++) {
+  dataString += String.fromCharCode(fileData[i]);
+}
+return dataString
+}
+
+function Decrypt(a) {
+  try {
+        const password = "QTQ3OTU0MjgyNUYzQjQ4ODY1QzRFNDdBRjZBMDI2RjIyRDg1M0RFQzJCMzI0OERGMjY4NTk5QkY4OUVGNzhCOQ==";
+        const m = atob(password)
+        const key = CryptoJS.enc.Utf8.parse(m.substr(0, 32));
+        const iv = CryptoJS.enc.Utf8.parse(m.substr(0, 16));
+        const c = btoa(uint8ArrayToString(a));
+        const str = CryptoJS.AES.decrypt(c, key, {
+            iv: iv,
+            mode: CryptoJS.mode.CBC,
+            padding: CryptoJS.pad.Pkcs7
+        });
+        const data = str.toString(CryptoJS.enc.Utf8);
+        if (data.charAt(0) == '{') return data;
+    } catch (m) {}
+  return new TextDecoder("utf-8").decode(a);
 }
 
 function init_fetch () {
